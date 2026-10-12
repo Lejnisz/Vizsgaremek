@@ -1,0 +1,265 @@
+# Uroborosz Biztonság Kft. – hálózati inventory (egyetlen igazságforrás)
+# A generate.py ebből és a templates/ sablonokból állítja elő az eszközök konfigját.
+# Jelszavak NINCSENEK itt: azok a secrets.yml-ben vannak (lásd secrets.example.yml).
+
+org:
+  name: Uroborosz Biztonság Kft.
+  domain: uroborosz.local
+  banner: Uroborosz Biztonsag Kft. - csak jogosult hasznalat
+  syslog: 10.1.30.20
+  dns: 10.1.30.10
+  # Menedzsment-hozzáférés (SSH) – wildcard maszkkal, minden eszköz MGMT-ACL-je ebből épül
+  mgmt_nets:
+    - {net: 10.1.40.0, wildcard: 0.0.0.255}   # menedzsment VLAN (HQ)
+    - {net: 10.1.254.0, wildcard: 0.0.0.7}    # core–ASA átvezető háló
+    - {net: 172.16.0.0, wildcard: 0.0.255.255} # alagút-hálózatok
+  ospf_process: 1
+  ipsec:
+    isakmp_group: 5
+    transform_set: esp-aes 256 esp-sha-hmac
+
+vlans:
+  10: SOC
+  20: DEV
+  30: SERVERS
+  40: MGMT
+  50: WIFI-STAFF
+  60: WIFI-GUEST
+  70: IOT
+  99: PARKING
+  100: DMZ
+  254: TRANSIT
+
+# ----------------------------------------------------------------------------
+# ISP (3650-24PS, routed portok)
+# ----------------------------------------------------------------------------
+isp:
+  hostname: ISP
+  domain: isp.local
+  links:
+    - {port: GigabitEthernet1/0/1, ip: 203.0.113.1, prefix: 30, v6: "2001:DB8:FFFF:1::1/64", desc: "R-BP"}
+    - {port: GigabitEthernet1/0/2, ip: 203.0.113.5, prefix: 30, v6: "2001:DB8:FFFF:2::1/64", desc: "R-DEB"}
+    - {port: GigabitEthernet1/0/3, ip: 203.0.113.9, prefix: 30, v6: "2001:DB8:FFFF:3::1/64", desc: "R-GYR"}
+    - {port: GigabitEthernet1/0/4, ip: 203.0.113.13, prefix: 30, v6: "2001:DB8:FFFF:4::1/64", desc: "R-UGY"}
+    - {port: GigabitEthernet1/0/5, ip: 192.0.2.1, prefix: 24, v6: "2001:DB8:FFFF:5::1/64", desc: "INET-SRV"}
+    - {port: GigabitEthernet1/0/6, ip: 198.18.0.1, prefix: 24, desc: "Tavmunkas (PC-HOME)"}
+  routes:
+    - {net: 198.51.100.0, prefix: 29, via: 203.0.113.2}   # NAT-olt (publikus) címtartomány → R-BP
+  v6_routes:
+    - {net: "2001:DB8:1::/48", via: "2001:DB8:FFFF:1::2"}
+    - {net: "2001:DB8:2::/48", via: "2001:DB8:FFFF:2::2"}
+    - {net: "2001:DB8:3::/48", via: "2001:DB8:FFFF:3::2"}
+    - {net: "2001:DB8:4::/48", via: "2001:DB8:FFFF:4::2"}
+  mgmt_extra:
+    - {net: 203.0.113.0, wildcard: 0.0.0.15}
+
+# ----------------------------------------------------------------------------
+# Telephelyek
+# ----------------------------------------------------------------------------
+sites:
+  bp:
+    name: Budapest (központ)
+    n: 1
+    router: R-BP
+    wan: {ip: 203.0.113.2, gw: 203.0.113.1, prefix: 30, v6: "2001:DB8:FFFF:1::2/64", v6_gw: "2001:DB8:FFFF:1::1"}
+  deb:
+    name: Debrecen
+    n: 2
+    router: R-DEB
+    switch: SW-DEB
+    lan: 10.2.0.0/16
+    ospf_router_id: 2.2.2.2
+    wan: {ip: 203.0.113.6, gw: 203.0.113.5, prefix: 30, v6: "2001:DB8:FFFF:2::2/64", v6_gw: "2001:DB8:FFFF:2::1"}
+    tunnel: {ip: 172.16.0.2, hub_ip: 172.16.0.1, net: 172.16.0.0, prefix: 30, hub_if: Tunnel0, hub_seq: 10, hub_acl: 101}
+    serial: {ip: 172.16.1.2, hub_ip: 172.16.1.1, net: 172.16.1.0, prefix: 30}
+    vlans:
+      - {id: 30}
+      - {id: 40, dhcp: MGMT}
+      - {id: 50, dhcp: WIFI}
+  gyr:
+    name: Győr
+    n: 3
+    router: R-GYR
+    switch: SW-GYR
+    lan: 10.3.0.0/16
+    ospf_router_id: 3.3.3.3
+    wan: {ip: 203.0.113.10, gw: 203.0.113.9, prefix: 30, v6: "2001:DB8:FFFF:3::2/64", v6_gw: "2001:DB8:FFFF:3::1"}
+    tunnel: {ip: 172.16.0.6, hub_ip: 172.16.0.5, net: 172.16.0.4, prefix: 30, hub_if: Tunnel1, hub_seq: 20, hub_acl: 102}
+    vlans:
+      - {id: 40, dhcp: MGMT}
+      - {id: 50, dhcp: WIFI}
+  ugy:
+    name: Ügyfél (mintaügyfél)
+    n: 4
+    router: R-UGY
+    switch: SW-UGY
+    lan: 10.4.0.0/16
+    ospf_router_id: 4.4.4.4
+    wan: {ip: 203.0.113.14, gw: 203.0.113.13, prefix: 30, v6: "2001:DB8:FFFF:4::2/64", v6_gw: "2001:DB8:FFFF:4::1"}
+    tunnel: {ip: 172.16.0.10, hub_ip: 172.16.0.9, net: 172.16.0.8, prefix: 30, hub_if: Tunnel2, hub_seq: 30, hub_acl: 103}
+    vlans:
+      - {id: 40, dhcp: MGMT}
+      - {id: 70, dhcp: IOT}
+
+# ----------------------------------------------------------------------------
+# Központi router (R-BP): alagút-hub, NAT, távmunkás VPN
+# ----------------------------------------------------------------------------
+hq_router:
+  hostname: R-BP
+  ospf_router_id: 1.1.1.1
+  lan_if: {port: FastEthernet0/1, ip: 10.1.255.1, prefix: 30, v6: "2001:DB8:1:FF::1/64"}
+  asa_outside: 10.1.255.2
+  asa_outside_v6: "2001:DB8:1:FF::2"
+  hq_net: {net: 10.1.0.0, mask: 255.255.0.0, wildcard: 0.0.255.255}
+  nat:
+    static: [{inside: 10.1.100.10, outside: 198.51.100.2}]
+    guest_pool: {name: GUEST, start: 198.51.100.3, end: 198.51.100.6, netmask: 255.255.255.248}
+    guest_net: {net: 10.1.60.0, wildcard: 0.0.0.255}
+  serial: {port: Serial0/0/0, desc: "PPP-CHAP backup link to R-DEB", peer_site: deb, clock_rate: 64000}
+  ppp_chap_peer: R-DEB
+  remote_vpn:
+    group: UROVPN
+    pool_name: VPN-POOL
+    pool_start: 10.9.0.10
+    pool_end: 10.9.0.50
+    pool_net: {net: 10.9.0.0, wildcard: 0.0.0.255}
+    user: vpnuser
+    split_nets:     # PT 8.2.2 nem támogatja a kliensnek küldött `acl`-t, de a VPN-SPLIT ACL megmarad dokumentációnak
+      - {net: 10.1.30.0, wildcard: 0.0.0.255}
+      - {net: 10.1.100.0, wildcard: 0.0.0.255}
+
+# ----------------------------------------------------------------------------
+# Tűzfal (ASA 5506-X)
+# ----------------------------------------------------------------------------
+asa:
+  hostname: ASA-BP
+  interfaces:
+    - {port: GigabitEthernet1/1, nameif: outside, level: 0,   ip: 10.1.255.2,  mask: 255.255.255.252, v6: "2001:DB8:1:FF::2/64"}
+    - {port: GigabitEthernet1/2, nameif: inside,  level: 100, ip: 10.1.254.4,  mask: 255.255.255.248, v6: "2001:DB8:1:254::4/64"}
+    - {port: GigabitEthernet1/3, nameif: dmz,     level: 50,  ip: 10.1.100.1,  mask: 255.255.255.0,   v6: "2001:DB8:1:100::1/64"}
+  unused_ports: [GigabitEthernet1/4, GigabitEthernet1/5, GigabitEthernet1/6, GigabitEthernet1/7, GigabitEthernet1/8]
+  mgmt_port: Management1/1
+  routes:
+    - {if: outside, net: 0.0.0.0,  mask: 0.0.0.0,   via: 10.1.255.1}
+    - {if: inside,  net: 10.1.0.0, mask: 255.255.0.0, via: 10.1.254.1}
+    - {if: outside, net: 10.2.0.0, mask: 255.254.0.0, via: 10.1.255.1}
+    - {if: outside, net: 10.4.0.0, mask: 255.255.0.0, via: 10.1.255.1}
+  v6_routes:
+    - {if: outside, net: "::/0", via: "2001:DB8:1:FF::1"}
+    - {if: inside,  net: "2001:DB8:1::/48", via: "2001:DB8:1:254::2"}
+  web_host: 10.1.100.10
+  # ACL sorok: pontosan ebben a sorrendben kerülnek a konfigba
+  acl_outside_in:
+    - permit tcp any host 10.1.100.10 eq 443
+    - permit tcp any host 10.1.100.10 eq www
+    - permit ip 10.2.0.0 255.254.0.0 10.1.0.0 255.255.0.0
+    - permit ip 10.4.0.0 255.255.0.0 10.1.0.0 255.255.0.0
+    - permit icmp any host 10.1.100.10 echo
+    - permit ip 10.9.0.0 255.255.255.0 10.1.30.0 255.255.255.0
+  acl_dmz_in:
+    - permit icmp host 10.1.100.10 10.1.0.0 255.255.0.0 echo-reply
+    - permit tcp host 10.1.100.10 eq www 10.1.0.0 255.255.0.0
+    - permit tcp host 10.1.100.10 eq 443 10.1.0.0 255.255.0.0
+    - deny ip 10.1.100.0 255.255.255.0 10.1.0.0 255.255.0.0
+    - permit ip any any
+  ssh_from: {net: 10.1.40.0, mask: 255.255.255.0, if: inside}
+
+# ----------------------------------------------------------------------------
+# HQ core switchek (3650-24PS): HSRP v2, Rapid-PVST, LACP Po1
+# ----------------------------------------------------------------------------
+core:
+  svi:    # a host-rész: Core-1 = .2, Core-2 = .3, VIP = .1
+    - {vlan: 10,  prefix: 24, helper: true}
+    - {vlan: 20,  prefix: 24, helper: true}
+    - {vlan: 30,  prefix: 24, helper: false}
+    - {vlan: 40,  prefix: 24, helper: true}
+    - {vlan: 50,  prefix: 24, helper: true}
+    - {vlan: 60,  prefix: 24, helper: true, acl_in: GUEST-IN}
+    - {vlan: 254, prefix: 29, helper: false, net_base: 10.1.254.0}
+  net_prefix: "10.1"      # 10.1.<vlan>.0 (kivéve ahol net_base meg van adva)
+  default_gw: 10.1.254.4
+  default_gw_v6: "2001:DB8:1:254::4"
+  guest_acl_deny: {src: 10.1.60.0, src_wild: 0.0.0.255, dst: 10.0.0.0, dst_wild: 0.255.255.255}
+  dhcp_server: 10.1.30.10
+  trunk_native: 99
+  portchannel: {id: 1, ports: [GigabitEthernet1/0/23, GigabitEthernet1/0/24]}
+  devices:
+    - {hostname: Core-1, host: 2, owns: [10, 30, 50, 254]}
+    - {hostname: Core-2, host: 3, owns: [20, 40, 60]}
+  downlinks:
+    - {port: GigabitEthernet1/0/1, desc: SW-A1}
+    - {port: GigabitEthernet1/0/2, desc: SW-A2}
+  asa_port: {port: GigabitEthernet1/0/3, vlan: 254, desc: SW-FW}
+  stp_owner_priority: 24576
+  stp_other_priority: 28672
+
+# DHCP-pool-ok a WIN-DC1-en (relay: ip helper-address a core SVI-kon)
+dhcp_hq:
+  server: WIN-DC1
+  excluded_to: 20
+  pools:
+    - {name: SOC, vlan: 10, dns: 10.1.30.10}
+    - {name: DEV, vlan: 20, dns: 10.1.30.10}
+    - {name: MGMT, vlan: 40, dns: 10.1.30.10}
+    - {name: WIFI-STAFF, vlan: 50, dns: 10.1.30.10}
+    - {name: WIFI-GUEST, vlan: 60, dns: 8.8.8.8}
+
+# ----------------------------------------------------------------------------
+# Access switchek (2960-24TT)
+# ports: a használt portok, minden más Fa0/1-24 port: VLAN 99 + shutdown
+# kind: host (port-security max 2) | ap (port-security max 10) | server (csak portfast+bpduguard)
+# ----------------------------------------------------------------------------
+switches:
+  - hostname: SW-A1
+    site: bp
+    mgmt: {vlan: 40, ip: 10.1.40.11, mask: 255.255.255.0, gw: 10.1.40.1}
+    stp: rapid-pvst
+    snooping_vlans: [10, 20, 50, 60]
+    uplinks: [GigabitEthernet0/1, GigabitEthernet0/2]
+    ports:
+      - {port: FastEthernet0/1, vlan: 10, kind: host}
+      - {port: FastEthernet0/2, vlan: 20, kind: host}
+      - {port: FastEthernet0/3, vlan: 50, kind: ap}
+      - {port: FastEthernet0/4, vlan: 60, kind: ap}
+  - hostname: SW-A2
+    site: bp
+    mgmt: {vlan: 40, ip: 10.1.40.12, mask: 255.255.255.0, gw: 10.1.40.1}
+    stp: rapid-pvst
+    uplinks: [GigabitEthernet0/1, GigabitEthernet0/2]
+    ports:
+      - {port: FastEthernet0/1, vlan: 30, kind: server}
+      - {port: FastEthernet0/2, vlan: 30, kind: server}
+  - hostname: SW-FW
+    site: bp
+    stp: pvst
+    plain: true          # egyszerű 254-es VLAN-os aggregáló az ASA és a core-ok között
+    ports:
+      - {port: FastEthernet0/1, vlan: 254, kind: server}
+      - {port: FastEthernet0/2, vlan: 254, kind: server}
+      - {port: FastEthernet0/3, vlan: 254, kind: server}
+  - hostname: SW-DEB
+    site: deb
+    stp: rapid-pvst
+    uplinks: [GigabitEthernet0/1]
+    spare_uplinks: [GigabitEthernet0/2]
+    ports:
+      - {port: FastEthernet0/1, vlan: 30, kind: host}
+      - {port: FastEthernet0/2, vlan: 40, kind: host}
+      - {port: FastEthernet0/3, vlan: 50, kind: ap}
+  - hostname: SW-GYR
+    site: gyr
+    stp: rapid-pvst
+    uplinks: [GigabitEthernet0/1]
+    spare_uplinks: [GigabitEthernet0/2]
+    ports:
+      - {port: FastEthernet0/1, vlan: 40, kind: host}
+      - {port: FastEthernet0/2, vlan: 50, kind: ap}
+  - hostname: SW-UGY
+    site: ugy
+    stp: rapid-pvst
+    uplinks: [GigabitEthernet0/1]
+    spare_uplinks: [GigabitEthernet0/2]
+    ports:
+      - {port: FastEthernet0/1, vlan: 40, kind: host}
+      - {port: FastEthernet0/2, vlan: 70, kind: host}
+      - {port: FastEthernet0/3, vlan: 70, kind: host}

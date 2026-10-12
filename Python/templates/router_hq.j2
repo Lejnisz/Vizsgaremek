@@ -1,0 +1,121 @@
+{% import '_macros.j2' as m %}
+! ============================================================
+! {{ hq.hostname }} – központi (Budapest) router: alagút-hub, NAT, távmunkás VPN
+! Generálva az inventory-ból – kézzel ne szerkeszd.
+! ============================================================
+{{ m.header(hq.hostname, org, secrets) }}
+ipv6 unicast-routing
+spanning-tree mode pvst
+{{ m.logging(org) }}
+!
+! --- AAA: konzol belépés nélkül (fizikai hozzáférés), VTY helyi felhasználóval, VPN helyi adatbázissal ---
+aaa new-model
+aaa authentication login default local
+aaa authentication login CONSOLE none
+aaa authentication login VPN-AUTHN local
+aaa authorization network VPN-AUTHZ local
+username {{ vpn.user }} secret {{ secrets.remote_vpn.password }}
+username {{ hq.ppp_chap_peer }} secret {{ secrets.chap_password }}
+!
+! --- IPsec: GRE-alagutak a telephelyekhez + Easy VPN szerver a távmunkásoknak ---
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group {{ org.ipsec.isakmp_group }}
+{% for s in remote_sites %}
+crypto isakmp key {{ secrets.ipsec_psk }} address {{ s.wan.ip }}
+{% endfor %}
+crypto isakmp client configuration group {{ vpn.group }}
+ key {{ secrets.remote_vpn.group_key }}
+ pool {{ vpn.pool_name }}
+crypto ipsec transform-set TS {{ org.ipsec.transform_set }}
+crypto dynamic-map DYN 10
+ set transform-set TS
+ reverse-route
+crypto map CM client authentication list VPN-AUTHN
+crypto map CM isakmp authorization list VPN-AUTHZ
+crypto map CM client configuration address respond
+{% for s in remote_sites %}
+access-list {{ s.tunnel.hub_acl }} permit gre host {{ hq_wan.ip }} host {{ s.wan.ip }}
+crypto map CM {{ s.tunnel.hub_seq }} ipsec-isakmp
+ set peer {{ s.wan.ip }}
+ set transform-set TS
+ match address {{ s.tunnel.hub_acl }}
+{% endfor %}
+crypto map CM 100 ipsec-isakmp dynamic DYN
+ip local pool {{ vpn.pool_name }} {{ vpn.pool_start }} {{ vpn.pool_end }}
+!
+{% for s in remote_sites %}
+interface {{ s.tunnel.hub_if }}
+ description GRE/IPsec {{ s.name }}
+ ip address {{ s.tunnel.hub_ip }} {{ s.tunnel.mask }}
+ mtu 1476
+ tunnel source FastEthernet0/0
+ tunnel destination {{ s.wan.ip }}
+{% endfor %}
+!
+interface FastEthernet0/0
+ description WAN (ISP)
+ ip address {{ hq_wan.ip }} {{ hq_wan.mask }}
+ ipv6 address {{ hq_wan.v6 }}
+ no ip proxy-arp
+ no cdp enable
+ ip nat outside
+ ip access-group WAN-IN in
+ crypto map CM
+!
+interface FastEthernet0/1
+ description ASA outside
+ ip address {{ hq.lan_if.ip }} {{ hq.lan_if.mask }}
+ ipv6 address {{ hq.lan_if.v6 }}
+ ip nat inside
+!
+{% if hq.serial_site is defined %}
+interface {{ hq.serial.port }}
+ description {{ hq.serial.desc }}
+ bandwidth 64
+ ip address {{ hq.serial_site.serial.hub_ip }} {{ hq.serial_site.serial.mask }}
+ encapsulation ppp
+ ppp authentication chap
+ clock rate {{ hq.serial.clock_rate }}
+ no shutdown
+!
+{% endif %}
+router ospf {{ org.ospf_process }}
+ router-id {{ hq.ospf_router_id }}
+ log-adjacency-changes
+ redistribute static subnets
+ network 172.16.0.0 0.0.0.255 area 0
+{% if hq.serial_site is defined %}
+ network {{ hq.serial_site.serial.net }} {{ hq.serial_site.serial.wildcard }} area 0
+{% endif %}
+!
+! --- NAT: statikus (DMZ web), dinamikus pool (vendég Wi-Fi), PAT (belső hálók) ---
+{% for st in hq.nat.static %}
+ip nat inside source static {{ st.inside }} {{ st.outside }}
+{% endfor %}
+ip nat pool {{ hq.nat.guest_pool.name }} {{ hq.nat.guest_pool.start }} {{ hq.nat.guest_pool.end }} netmask {{ hq.nat.guest_pool.netmask }}
+ip nat inside source list 60 pool {{ hq.nat.guest_pool.name }}
+ip nat inside source list 50 interface FastEthernet0/0 overload
+access-list 60 permit {{ hq.nat.guest_net.net }} {{ hq.nat.guest_net.wildcard }}
+access-list 50 deny {{ hq.nat.guest_net.net }} {{ hq.nat.guest_net.wildcard }}
+access-list 50 permit {{ hq.hq_net.net }} {{ hq.hq_net.wildcard }}
+!
+ip route 0.0.0.0 0.0.0.0 {{ hq_wan.gw }}
+ip route {{ hq.hq_net.net }} {{ hq.hq_net.mask }} {{ hq.asa_outside }}
+ipv6 route ::/0 {{ hq_wan.v6_gw }}
+ipv6 route 2001:DB8:1::/48 {{ hq.asa_outside_v6 }}
+!
+{{ m.wan_in_acl(extra_permit=vpn.pool_net) }}
+ip access-list extended VPN-SPLIT
+{% for n in vpn.split_nets %}
+ permit ip {{ n.net }} {{ n.wildcard }} any
+{% endfor %}
+{{ m.mgmt_acl(mgmt_nets) }}
+!
+crypto key generate rsa modulus 1024
+line con 0
+ login authentication CONSOLE
+{{ m.vty(aaa=true) }}
+end
+write memory

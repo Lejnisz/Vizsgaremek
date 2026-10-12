@@ -1,0 +1,76 @@
+{% import '_macros.j2' as m %}
+! ============================================================
+! {{ dev.hostname }} – HQ core (3650-24PS): HSRP v2, Rapid-PVST, LACP {{ core.portchannel.name }}
+! Generálva az inventory-ból – kézzel ne szerkeszd.
+! ============================================================
+{{ m.header(dev.hostname, org, secrets) }}
+ip routing
+ipv6 unicast-routing
+{{ m.logging(org) }}
+!
+{% for v in vlan_defs %}
+vlan {{ v.id }}
+ name {{ v.name }}
+{% endfor %}
+!
+spanning-tree mode rapid-pvst
+{% if dev.stp_owned %}
+spanning-tree vlan {{ dev.stp_owned|join(',') }} priority {{ core.stp_owner_priority }}
+{% endif %}
+{% if dev.stp_other %}
+spanning-tree vlan {{ dev.stp_other|join(',') }} priority {{ core.stp_other_priority }}
+{% endif %}
+!
+interface {{ core.portchannel.name }}
+ description Core-Core
+ switchport trunk native vlan {{ core.trunk_native }}
+ switchport mode trunk
+{% for p in core.portchannel.ports %}
+interface {{ p }}
+ description Core-Core LACP
+ switchport trunk native vlan {{ core.trunk_native }}
+ switchport mode trunk
+ channel-group {{ core.portchannel.id }} mode active
+{% endfor %}
+{% for d in core.downlinks %}
+interface {{ d.port }}
+ description {{ d.desc }}
+ switchport trunk native vlan {{ core.trunk_native }}
+ switchport mode trunk
+{% endfor %}
+interface {{ core.asa_port.port }}
+ description {{ core.asa_port.desc }}
+ switchport access vlan {{ core.asa_port.vlan }}
+ switchport mode access
+!
+{% for s in dev.svis %}
+interface Vlan{{ s.vlan }}
+ description {{ s.name }}
+ ip address {{ s.ip }} {{ s.mask }}
+{% if s.helper %}
+ ip helper-address {{ core.dhcp_server }}
+{% endif %}
+{% if s.acl_in is defined %}
+ ip access-group {{ s.acl_in }} in
+{% endif %}
+ ipv6 address {{ s.v6 }}
+ standby version 2
+ standby {{ s.vlan }} ip {{ s.vip }}
+{% if s.owner %}
+ standby {{ s.vlan }} priority 110
+{% endif %}
+ standby {{ s.vlan }} preempt
+{% endfor %}
+!
+ip route 0.0.0.0 0.0.0.0 {{ core.default_gw }}
+ipv6 route ::/0 {{ core.default_gw_v6 }}
+!
+ip access-list extended GUEST-IN
+ deny ip {{ core.guest_acl_deny.src }} {{ core.guest_acl_deny.src_wild }} {{ core.guest_acl_deny.dst }} {{ core.guest_acl_deny.dst_wild }}
+ permit ip any any
+{{ m.mgmt_acl(mgmt_nets) }}
+!
+crypto key generate rsa modulus 1024
+{{ m.vty() }}
+end
+write memory

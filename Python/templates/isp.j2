@@ -1,0 +1,35 @@
+{% import '_macros.j2' as m %}
+! ============================================================
+! {{ isp.hostname }} – szolgáltató (3650-24PS, routed portok)
+! Generálva az inventory-ból – kézzel ne szerkeszd.
+! ============================================================
+{{ m.header(isp.hostname, org, secrets, domain=isp.domain) }}
+ip routing
+ipv6 unicast-routing
+spanning-tree mode pvst
+{{ m.logging(org) }}
+!
+{% for l in isp.links %}
+interface {{ l.port }}
+ description {{ l.desc }}
+ no switchport
+ ip address {{ l.ip }} {{ l.mask }}
+{% if l.v6 is defined %}
+ ipv6 address {{ l.v6 }}
+{% endif %}
+ no shutdown
+{% endfor %}
+!
+{% for r in isp.routes %}
+ip route {{ r.net }} {{ r.netmask }} {{ r.via }}
+{% endfor %}
+{% for r in isp.v6_routes %}
+ipv6 route {{ r.net }} {{ r.via }}
+{% endfor %}
+!
+{{ m.mgmt_acl(mgmt_nets) }}
+!
+crypto key generate rsa modulus 1024
+{{ m.vty() }}
+end
+write memory

@@ -1,0 +1,181 @@
+Building configuration...
+
+Current configuration : 3350 bytes
+!
+version 12.4
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname R-DEB
+!
+login block-for 120 attempts 5 within 60
+!
+!
+enable secret 5 $1$mERr$he2fdun4XsKPZCFWA6xW9/
+!
+!
+ip dhcp excluded-address 10.2.40.1 10.2.40.20
+ip dhcp excluded-address 10.2.50.1 10.2.50.20
+!
+ip dhcp pool MGMT
+ network 10.2.40.0 255.255.255.0
+ default-router 10.2.40.1
+ dns-server 10.1.30.10
+ip dhcp pool WIFI
+ network 10.2.50.0 255.255.255.0
+ default-router 10.2.50.1
+ dns-server 10.1.30.10
+!
+!
+!
+ip cef
+ipv6 unicast-routing
+!
+no ipv6 cef
+!
+!
+!
+username R-BP secret 5 $1$mERr$usZGiSkDXISd0nzqcbgtP0
+username admin privilege 15 secret 5 $1$mERr$kTyI5wGy8NHk8VB7p6x0q1
+!
+!
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group 5
+!
+crypto isakmp key UroVpn#2026 address 203.0.113.2
+!
+!
+!
+crypto ipsec transform-set TS esp-aes 256 esp-sha-hmac
+!
+crypto map CM 10 ipsec-isakmp
+ set peer 203.0.113.2
+ set transform-set TS
+ match address 101
+!
+!
+!
+!
+ip ssh version 2
+no ip domain-lookup
+ip domain-name uroborosz.local
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface Tunnel0
+ ip address 172.16.0.2 255.255.255.252
+ mtu 1476
+ tunnel source FastEthernet0/0
+ tunnel destination 203.0.113.2
+!
+interface FastEthernet0/0
+ ip address 203.0.113.6 255.255.255.252
+ no ip proxy-arp
+ ip access-group WAN-IN in
+ duplex auto
+ speed auto
+ ipv6 address 2001:DB8:FFFF:2::2/64
+ no cdp enable
+ crypto map CM
+!
+interface FastEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1.30
+ encapsulation dot1Q 30
+ ip address 10.2.30.1 255.255.255.0
+ ipv6 address 2001:DB8:2:30::1/64
+!
+interface FastEthernet0/1.40
+ encapsulation dot1Q 40
+ ip address 10.2.40.1 255.255.255.0
+ ipv6 address 2001:DB8:2:40::1/64
+!
+interface FastEthernet0/1.50
+ encapsulation dot1Q 50
+ ip address 10.2.50.1 255.255.255.0
+ ipv6 address 2001:DB8:2:50::1/64
+!
+interface Serial0/0/0
+ description PPP-CHAP backup link to R-BP
+ bandwidth 64
+ ip address 172.16.1.2 255.255.255.252
+ encapsulation ppp
+ ppp authentication chap
+!
+interface Serial0/0/1
+ no ip address
+ clock rate 2000000
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ router-id 2.2.2.2
+ log-adjacency-changes
+ passive-interface FastEthernet0/1.30
+ passive-interface FastEthernet0/1.40
+ passive-interface FastEthernet0/1.50
+ network 172.16.0.0 0.0.0.3 area 0
+ network 10.2.0.0 0.0.255.255 area 0
+ network 172.16.1.0 0.0.0.3 area 0
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 203.0.113.5
+!
+ip flow-export version 9
+!
+ipv6 route ::/0 2001:DB8:FFFF:2::1
+!
+ip access-list extended sl_def_acl
+ deny tcp any any eq telnet
+ deny tcp any any eq www
+ deny tcp any any eq 22
+ permit tcp any any eq 22
+access-list 101 permit gre host 203.0.113.6 host 203.0.113.2
+ip access-list standard MGMT-ACL
+ permit 10.1.40.0 0.0.0.255
+ permit 10.2.40.0 0.0.0.255
+ permit 10.1.254.0 0.0.0.7
+ permit 172.16.0.0 0.0.255.255
+ip access-list extended WAN-IN
+ deny ip 10.0.0.0 0.255.255.255 any
+ deny ip 172.16.0.0 0.15.255.255 any
+ deny ip 192.168.0.0 0.0.255.255 any
+ deny ip 127.0.0.0 0.255.255.255 any
+ permit ip any any
+!
+banner motd ^CUroborosz Biztonsag Kft. - csak jogosult hasznalat^C
+!
+!
+!
+!
+!
+logging 10.1.30.20
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ access-class MGMT-ACL in
+ login local
+ transport input ssh
+line vty 5 15
+ access-class MGMT-ACL in
+ login
+!
+!
+!
+end

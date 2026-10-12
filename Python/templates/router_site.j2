@@ -1,0 +1,95 @@
+{% import '_macros.j2' as m %}
+! ============================================================
+! {{ dev.hostname }} – {{ site.name }} telephely router (Cisco 2811)
+! Generálva az inventory-ból – kézzel ne szerkeszd.
+! ============================================================
+{{ m.header(dev.hostname, org, secrets) }}
+ipv6 unicast-routing
+spanning-tree mode pvst
+{{ m.logging(org) }}
+!
+! --- DHCP (helyi pool-ok) ---
+{% for v in site.vlan_rows if v.dhcp %}
+ip dhcp excluded-address {{ v.net_base }}.1 {{ v.net_base }}.20
+{% endfor %}
+{% for v in site.vlan_rows if v.dhcp %}
+ip dhcp pool {{ v.dhcp }}
+ network {{ v.net_base }}.0 255.255.255.0
+ default-router {{ v.gw }}
+ dns-server {{ org.dns }}
+{% endfor %}
+!
+! --- IPsec (GRE-over-IPsec a központ felé; PT 8.2.2: crypto map a fizikai WAN porton) ---
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group {{ org.ipsec.isakmp_group }}
+crypto isakmp key {{ secrets.ipsec_psk }} address {{ hub_wan_ip }}
+crypto ipsec transform-set TS {{ org.ipsec.transform_set }}
+access-list 101 permit gre host {{ site.wan.ip }} host {{ hub_wan_ip }}
+crypto map CM 10 ipsec-isakmp
+ set peer {{ hub_wan_ip }}
+ set transform-set TS
+ match address 101
+!
+interface Tunnel0
+ ip address {{ site.tunnel.ip }} {{ site.tunnel.mask }}
+ mtu 1476
+ tunnel source FastEthernet0/0
+ tunnel destination {{ hub_wan_ip }}
+!
+interface FastEthernet0/0
+ description WAN (ISP)
+ ip address {{ site.wan.ip }} {{ site.wan.mask }}
+ ipv6 address {{ site.wan.v6 }}
+ no ip proxy-arp
+ no cdp enable
+ ip access-group WAN-IN in
+ crypto map CM
+!
+interface FastEthernet0/1
+ description LAN trunk ({{ site.switch }})
+ no ip address
+ no shutdown
+{% for v in site.vlan_rows %}
+interface FastEthernet0/1.{{ v.id }}
+ description {{ v.name }}
+ encapsulation dot1Q {{ v.id }}
+ ip address {{ v.gw }} 255.255.255.0
+ ipv6 address {{ v.v6 }}
+{% endfor %}
+{% if site.serial is defined %}
+!
+! --- PPP/CHAP tartalék soros link a központ felé ---
+username {{ hq_router.hostname }} secret {{ secrets.chap_password }}
+interface Serial0/0/0
+ description PPP-CHAP backup link to {{ hq_router.hostname }}
+ bandwidth 64
+ ip address {{ site.serial.ip }} {{ site.serial.mask }}
+ encapsulation ppp
+ ppp authentication chap
+ no shutdown
+{% endif %}
+!
+router ospf {{ org.ospf_process }}
+ router-id {{ site.ospf_router_id }}
+ log-adjacency-changes
+{% for v in site.vlan_rows %}
+ passive-interface FastEthernet0/1.{{ v.id }}
+{% endfor %}
+ network {{ site.tunnel.net }} {{ site.tunnel.wildcard }} area 0
+ network {{ site.lan_net }} {{ site.lan_wildcard }} area 0
+{% if site.serial is defined %}
+ network {{ site.serial.net }} {{ site.serial.wildcard }} area 0
+{% endif %}
+!
+ip route 0.0.0.0 0.0.0.0 {{ site.wan.gw }}
+ipv6 route ::/0 {{ site.wan.v6_gw }}
+!
+{{ m.wan_in_acl() }}
+{{ m.mgmt_acl(mgmt_nets) }}
+!
+crypto key generate rsa modulus 1024
+{{ m.vty() }}
+end
+write memory

@@ -1,0 +1,68 @@
+{% import '_macros.j2' as m %}
+! ============================================================
+! {{ dev.hostname }} – access switch (2960-24TT), {{ site_name }}
+! Generálva az inventory-ból – kézzel ne szerkeszd.
+! ============================================================
+{{ m.header(dev.hostname, org, secrets, login_block=false) }}
+{{ m.logging(org) }}
+!
+{% for v in vlan_defs %}
+vlan {{ v.id }}
+ name {{ v.name }}
+{% endfor %}
+!
+spanning-tree mode {{ dev.stp }}
+{% if dev.snooping_vlans %}
+ip dhcp snooping vlan {{ dev.snooping_vlans|join(',') }}
+no ip dhcp snooping information option
+ip dhcp snooping
+{% endif %}
+!
+{% for p in dev.port_rows %}
+interface {{ p.port }}
+{% if p.shutdown %}
+ description PARKING (nem hasznalt port)
+ switchport access vlan {{ p.vlan }}
+ switchport mode access
+ shutdown
+{% else %}
+ switchport access vlan {{ p.vlan }}
+ switchport mode access
+{% if p.port_security %}
+ switchport port-security
+ switchport port-security maximum {{ p.port_security }}
+ switchport port-security violation restrict
+{% endif %}
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+{% endif %}
+{% endfor %}
+!
+{% for u in dev.uplinks|default([]) %}
+interface {{ u }}
+ description trunk
+ switchport trunk native vlan {{ trunk_native }}
+ switchport mode trunk
+{% if dev.snooping_vlans %}
+ ip dhcp snooping trust
+{% endif %}
+{% endfor %}
+{% for u in dev.spare_uplinks|default([]) %}
+interface {{ u }}
+ description PARKING (tartalek uplink)
+ switchport access vlan {{ parking_vlan }}
+ shutdown
+{% endfor %}
+!
+{% if dev.mgmt is defined %}
+interface Vlan{{ dev.mgmt.vlan }}
+ ip address {{ dev.mgmt.ip }} {{ dev.mgmt.mask }}
+ no shutdown
+ip default-gateway {{ dev.mgmt.gw }}
+{% endif %}
+{{ m.mgmt_acl(mgmt_nets) }}
+!
+crypto key generate rsa modulus 1024
+{{ m.vty() }}
+end
+write memory

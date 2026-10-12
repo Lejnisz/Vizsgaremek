@@ -1,0 +1,49 @@
+{#- Közös építőelemek. A hívó adja át a szükséges adatokat, a macro nem lát globális állapotot. -#}
+
+{% macro header(hostname, org, secrets, domain=none, login_block=true) -%}
+hostname {{ hostname }}
+service password-encryption
+no ip domain-lookup
+ip domain-name {{ domain or org.domain }}
+ip ssh version 2
+enable secret {{ secrets.enable_secret }}
+username {{ secrets.admin_user }} privilege 15 secret {{ secrets.admin_password }}
+{% if login_block %}
+login block-for 120 attempts 5 within 60
+{% endif %}
+banner motd #{{ org.banner }}#
+{%- endmacro %}
+
+{% macro mgmt_acl(nets) -%}
+ip access-list standard MGMT-ACL
+{% for n in nets %}
+ permit {{ n.net }} {{ n.wildcard }}
+{% endfor %}
+{%- endmacro %}
+
+{#- vty sorok: SSH-only, helyi felhasználó. aaa=true esetén (aaa new-model) a `login local` elmarad. -#}
+{% macro vty(aaa=false) -%}
+line vty 0 15
+ access-class MGMT-ACL in
+{% if not aaa %}
+ login local
+{% endif %}
+ transport input ssh
+{%- endmacro %}
+
+{% macro logging(org) -%}
+logging buffered 16384
+logging host {{ org.syslog }}
+{%- endmacro %}
+
+{% macro wan_in_acl(extra_permit=none) -%}
+ip access-list extended WAN-IN
+{% if extra_permit %}
+ permit ip {{ extra_permit.net }} {{ extra_permit.wildcard }} any
+{% endif %}
+ deny ip 10.0.0.0 0.255.255.255 any
+ deny ip 172.16.0.0 0.15.255.255 any
+ deny ip 192.168.0.0 0.0.255.255 any
+ deny ip 127.0.0.0 0.255.255.255 any
+ permit ip any any
+{%- endmacro %}

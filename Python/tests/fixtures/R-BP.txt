@@ -1,0 +1,191 @@
+Building configuration...
+
+Current configuration : 4564 bytes
+!
+version 12.4
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname R-BP
+!
+login block-for 120 attempts 5 within 60
+!
+enable secret 5 $1$mERr$he2fdun4XsKPZCFWA6xW9/
+!
+aaa new-model
+!
+aaa authentication login CONSOLE none
+aaa authentication login VPN-AUTHN local
+aaa authentication login default local
+!
+aaa authorization network VPN-AUTHZ local
+!
+ip cef
+ipv6 unicast-routing
+!
+no ipv6 cef
+!
+username R-DEB secret 5 $1$mERr$usZGiSkDXISd0nzqcbgtP0
+username admin privilege 15 secret 5 $1$mERr$kTyI5wGy8NHk8VB7p6x0q1
+username vpnuser secret 5 $1$mERr$hl2cBtgSKEbxD01khfk.H/
+!
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group 5
+!
+crypto isakmp key UroVpn#2026 address 203.0.113.6
+crypto isakmp key UroVpn#2026 address 203.0.113.10
+crypto isakmp key UroVpn#2026 address 203.0.113.14
+!
+crypto isakmp client configuration group UROVPN
+ key UroVpn#Remote2026
+ pool VPN-POOL
+!
+crypto ipsec transform-set TS esp-aes 256 esp-sha-hmac
+!
+crypto dynamic-map DYN 10
+ set transform-set TS
+ reverse-route
+!
+crypto map CM client authentication list VPN-AUTHN
+crypto map CM isakmp authorization list VPN-AUTHZ
+crypto map CM client configuration address respond
+crypto map CM 10 ipsec-isakmp
+ set peer 203.0.113.6
+ set transform-set TS
+ match address 101
+!
+crypto map CM 20 ipsec-isakmp
+ set peer 203.0.113.10
+ set transform-set TS
+ match address 102
+!
+crypto map CM 30 ipsec-isakmp
+ set peer 203.0.113.14
+ set transform-set TS
+ match address 103
+!
+crypto map CM 100 ipsec-isakmp dynamic DYN
+!
+ip ssh version 2
+no ip domain-lookup
+ip domain-name uroborosz.local
+!
+spanning-tree mode pvst
+!
+interface Tunnel0
+ ip address 172.16.0.1 255.255.255.252
+ mtu 1476
+ tunnel source FastEthernet0/0
+ tunnel destination 203.0.113.6
+!
+interface Tunnel1
+ ip address 172.16.0.5 255.255.255.252
+ mtu 1476
+ tunnel source FastEthernet0/0
+ tunnel destination 203.0.113.10
+!
+interface Tunnel2
+ ip address 172.16.0.9 255.255.255.252
+ mtu 1476
+ tunnel source FastEthernet0/0
+ tunnel destination 203.0.113.14
+!
+interface FastEthernet0/0
+ ip address 203.0.113.2 255.255.255.252
+ no ip proxy-arp
+ ip access-group WAN-IN in
+ ip nat outside
+ duplex auto
+ speed auto
+ ipv6 address 2001:DB8:FFFF:1::2/64
+ no cdp enable
+ crypto map CM
+!
+interface FastEthernet0/1
+ ip address 10.1.255.1 255.255.255.252
+ ip nat inside
+ duplex auto
+ speed auto
+ ipv6 address 2001:DB8:1:FF::1/64
+!
+interface Serial0/0/0
+ description PPP-CHAP backup link to R-DEB
+ bandwidth 64
+ ip address 172.16.1.1 255.255.255.252
+ encapsulation ppp
+ ppp authentication chap
+ clock rate 64000
+!
+interface Serial0/0/1
+ no ip address
+ clock rate 2000000
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ router-id 1.1.1.1
+ log-adjacency-changes
+ redistribute static subnets
+ network 172.16.0.0 0.0.0.255 area 0
+ network 172.16.1.0 0.0.0.3 area 0
+!
+ip local pool VPN-POOL 10.9.0.10 10.9.0.50
+ip nat pool GUEST 198.51.100.3 198.51.100.6 netmask 255.255.255.248
+ip nat inside source list 50 interface FastEthernet0/0 overload
+ip nat inside source list 60 pool GUEST
+ip nat inside source static 10.1.100.10 198.51.100.2
+ip classless
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+ip route 10.1.0.0 255.255.0.0 10.1.255.2
+!
+ip flow-export version 9
+!
+ipv6 route ::/0 2001:DB8:FFFF:1::1
+ipv6 route 2001:DB8:1::/48 2001:DB8:1:FF::2
+!
+ip access-list extended sl_def_acl
+ deny tcp any any eq telnet
+ deny tcp any any eq www
+ deny tcp any any eq 22
+ permit tcp any any eq 22
+access-list 101 permit gre host 203.0.113.2 host 203.0.113.6
+access-list 102 permit gre host 203.0.113.2 host 203.0.113.10
+access-list 103 permit gre host 203.0.113.2 host 203.0.113.14
+access-list 60 permit 10.1.60.0 0.0.0.255
+access-list 50 deny 10.1.60.0 0.0.0.255
+access-list 50 permit 10.1.0.0 0.0.255.255
+ip access-list standard MGMT-ACL
+ permit 10.1.40.0 0.0.0.255
+ permit 10.1.254.0 0.0.0.7
+ permit 172.16.0.0 0.0.255.255
+ip access-list extended WAN-IN
+ permit ip 10.9.0.0 0.0.0.255 any
+ deny ip 10.0.0.0 0.255.255.255 any
+ deny ip 172.16.0.0 0.15.255.255 any
+ deny ip 192.168.0.0 0.0.255.255 any
+ deny ip 127.0.0.0 0.255.255.255 any
+ permit ip any any
+ip access-list extended VPN-SPLIT
+ permit ip 10.1.30.0 0.0.0.255 any
+ permit ip 10.1.100.0 0.0.0.255 any
+!
+banner motd ^CUroborosz Biztonsag Kft. - csak jogosult hasznalat^C
+!
+logging 10.1.30.20
+line con 0
+ login authentication CONSOLE
+!
+line aux 0
+!
+line vty 0 4
+ access-class MGMT-ACL in
+ transport input ssh
+line vty 5 15
+ access-class MGMT-ACL in
+!
+end

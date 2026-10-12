@@ -1,0 +1,66 @@
+! ============================================================
+! {{ asa.hostname }} – ASA 5506-X (PT 8.2.2 / ASA 9.6(1) CLI)
+! Generálva az inventory-ból – kézzel ne szerkeszd.
+! ============================================================
+hostname {{ asa.hostname }}
+domain-name {{ org.domain }}
+enable password {{ secrets.enable_secret }}
+!
+{% for i in asa.interfaces %}
+interface {{ i.port }}
+ nameif {{ i.nameif }}
+ security-level {{ i.level }}
+ ip address {{ i.ip }} {{ i.mask }}
+ ipv6 address {{ i.v6 }}
+ no shutdown
+{% endfor %}
+{% for p in asa.unused_ports %}
+interface {{ p }}
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+{% endfor %}
+interface {{ asa.mgmt_port }}
+ management-only
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+!
+{% for r in asa.routes %}
+route {{ r.if }} {{ r.net }} {{ r.mask }} {{ r.via }} 1
+{% endfor %}
+{% for r in asa.v6_routes %}
+ipv6 route {{ r.if }} {{ r.net }} {{ r.via }}
+{% endfor %}
+!
+{% for l in asa.acl_outside_in %}
+access-list OUTSIDE-IN extended {{ l }}
+{% endfor %}
+{% for l in asa.acl_dmz_in %}
+access-list DMZ-IN extended {{ l }}
+{% endfor %}
+access-group OUTSIDE-IN in interface outside
+access-group DMZ-IN in interface dmz
+!
+! --- Állapottartó vizsgálat (a PT-ASA ICMP válaszokat csak inspect icmp mellett enged vissza) ---
+policy-map type inspect dns preset_dns_map
+ parameters
+  message-length maximum 512
+policy-map global_policy
+ class inspection_default
+  inspect dns preset_dns_map
+  inspect ftp
+  inspect icmp
+  inspect tftp
+service-policy global_policy global
+!
+! --- Menedzsment: SSH csak a menedzsment hálóról, helyi felhasználóval ---
+username {{ secrets.admin_user }} password {{ secrets.admin_password }}
+aaa authentication ssh console LOCAL
+ssh {{ asa.ssh_from.net }} {{ asa.ssh_from.mask }} {{ asa.ssh_from.if }}
+ssh timeout 5
+! A kulcsgenerálás interaktív (yes/no kérdést adhat): crypto key generate rsa modulus 1024
+end
+write memory
