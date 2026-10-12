@@ -191,7 +191,7 @@ class Model:
             p = by_port.get(port)
             if p:
                 sec = {"host": 2, "ap": 10}.get(p["kind"])
-                rows.append({"port": port, "vlan": p["vlan"], "shutdown": False, "port_security": sec})
+                rows.append({"port": port, "vlan": p["vlan"], "shutdown": False, "port_security": sec, "bpduguard": p["kind"] != "link"})
             else:
                 rows.append({"port": port, "vlan": 99, "shutdown": True, "port_security": None})
         used_vlans = {p["vlan"] for p in sw["ports"]} | {99}
@@ -315,14 +315,22 @@ def validate(model: Model) -> list[str]:
 # ---------------------------------------------------------------------------
 # Renderelés
 # ---------------------------------------------------------------------------
+def ascii_(s: str) -> str:
+    """Ékezetek nélküli szöveg (a PT konzol a nem-ASCII karaktereket elrontja)."""
+    import unicodedata
+    return unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
+
+
 def make_env() -> jinja2.Environment:
-    return jinja2.Environment(
+    env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(ROOT / "templates")),
         undefined=jinja2.StrictUndefined,   # hiányzó adat → hiba, nem üres string
         trim_blocks=True,
         lstrip_blocks=True,
         keep_trailing_newline=True,
     )
+    env.filters["ascii"] = ascii_
+    return env
 
 
 def render(env: jinja2.Environment, dev: dict) -> str:

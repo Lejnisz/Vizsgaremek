@@ -174,8 +174,19 @@ line vty 0 4
  transport input ssh
 line vty 5 15
  access-class MGMT-ACL in
- login
+ login local
+ transport input ssh
 !
 !
 !
+interface FastEthernet0/0
+ description WAN (ISP)
+interface FastEthernet0/1
+ description LAN trunk (SW-DEB)
+interface FastEthernet0/1.30
+ description SERVERS
+interface FastEthernet0/1.40
+ description MGMT
+interface FastEthernet0/1.50
+ description WIFI-STAFF
 end

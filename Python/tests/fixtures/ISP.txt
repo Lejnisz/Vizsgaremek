@@ -1,111 +1,67 @@
-Building configuration...
-
-Current configuration : 2926 bytes
-!
-version 16.3.2
-no service timestamps log datetime msec
-no service timestamps debug datetime msec
-no service password-encryption
-!
 hostname ISP
-!
 login block-for 120 attempts 5 within 60
-!
 enable secret 5 $1$mERr$he2fdun4XsKPZCFWA6xW9/
-!
-no ip cef
 ip routing
-!
 ipv6 unicast-routing
-!
-no ipv6 cef
-!
 username admin privilege 15 secret 5 $1$mERr$kTyI5wGy8NHk8VB7p6x0q1
-!
 ip ssh version 2
 no ip domain-lookup
 ip domain-name isp.local
-!
 spanning-tree mode pvst
-!
 interface GigabitEthernet1/0/1
  no switchport
  ip address 203.0.113.1 255.255.255.252
- duplex auto
- speed auto
  ipv6 address 2001:DB8:FFFF:1::1/64
-!
 interface GigabitEthernet1/0/2
  no switchport
  ip address 203.0.113.5 255.255.255.252
- duplex auto
- speed auto
  ipv6 address 2001:DB8:FFFF:2::1/64
-!
 interface GigabitEthernet1/0/3
  no switchport
  ip address 203.0.113.9 255.255.255.252
- duplex auto
- speed auto
  ipv6 address 2001:DB8:FFFF:3::1/64
-!
 interface GigabitEthernet1/0/4
  no switchport
  ip address 203.0.113.13 255.255.255.252
- duplex auto
- speed auto
  ipv6 address 2001:DB8:FFFF:4::1/64
-!
 interface GigabitEthernet1/0/5
  no switchport
  ip address 192.0.2.1 255.255.255.0
- duplex auto
- speed auto
  ipv6 address 2001:DB8:FFFF:5::1/64
-!
 interface GigabitEthernet1/0/6
  no switchport
  ip address 198.18.0.1 255.255.255.0
- duplex auto
- speed auto
-!
-interface Vlan1
- no ip address
- shutdown
-!
-ip classless
 ip route 198.51.100.0 255.255.255.248 203.0.113.2
-!
-ip flow-export version 9
-!
 ipv6 route 2001:DB8:1::/48 2001:DB8:FFFF:1::2
 ipv6 route 2001:DB8:2::/48 2001:DB8:FFFF:2::2
 ipv6 route 2001:DB8:3::/48 2001:DB8:FFFF:3::2
 ipv6 route 2001:DB8:4::/48 2001:DB8:FFFF:4::2
-!
-ip access-list extended sl_def_acl
- deny tcp any any eq telnet
- deny tcp any any eq www
- deny tcp any any eq 22
- permit tcp any any eq 22
 ip access-list standard MGMT-ACL
  permit 10.1.40.0 0.0.0.255
  permit 10.1.254.0 0.0.0.7
  permit 203.0.113.0 0.0.0.15
-!
+ permit 172.16.0.0 0.0.255.255
 banner motd ^CUroborosz Biztonsag Kft. - csak jogosult hasznalat^C
-!
 logging 10.1.30.20
 line con 0
-!
-line aux 0
-!
 line vty 0 4
  access-class MGMT-ACL in
  login local
  transport input ssh
 line vty 5 15
  access-class MGMT-ACL in
- login
-!
+ login local
+ transport input ssh
+interface GigabitEthernet1/0/1
+ description R-BP
+interface GigabitEthernet1/0/2
+ description R-DEB
+interface GigabitEthernet1/0/3
+ description R-GYR
+interface GigabitEthernet1/0/4
+ description R-UGY
+interface GigabitEthernet1/0/5
+ description INET-SRV
+interface GigabitEthernet1/0/6
+ description Tavmunkas (PC-HOME)
 end

@@ -34,7 +34,9 @@ interface {{ p.port }}
  switchport port-security violation restrict
 {% endif %}
  spanning-tree portfast
+{% if p.bpduguard %}
  spanning-tree bpduguard enable
+{% endif %}
 {% endif %}
 {% endfor %}
 !

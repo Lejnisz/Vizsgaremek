@@ -187,5 +187,10 @@ line vty 0 4
  transport input ssh
 line vty 5 15
  access-class MGMT-ACL in
+ transport input ssh
 !
+interface FastEthernet0/0
+ description WAN (ISP)
+interface FastEthernet0/1
+ description ASA outside
 end

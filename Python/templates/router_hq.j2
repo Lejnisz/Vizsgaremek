@@ -47,7 +47,6 @@ ip local pool {{ vpn.pool_name }} {{ vpn.pool_start }} {{ vpn.pool_end }}
 !
 {% for s in remote_sites %}
 interface {{ s.tunnel.hub_if }}
- description GRE/IPsec {{ s.name }}
  ip address {{ s.tunnel.hub_ip }} {{ s.tunnel.mask }}
  mtu 1476
  tunnel source FastEthernet0/0
@@ -72,7 +71,7 @@ interface FastEthernet0/1
 !
 {% if hq.serial_site is defined %}
 interface {{ hq.serial.port }}
- description {{ hq.serial.desc }}
+ description {{ hq.serial.desc|ascii }}
  bandwidth 64
  ip address {{ hq.serial_site.serial.hub_ip }} {{ hq.serial_site.serial.mask }}
  encapsulation ppp

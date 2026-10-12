@@ -207,7 +207,7 @@ dhcp_hq:
 # ----------------------------------------------------------------------------
 # Access switchek (2960-24TT)
 # ports: a használt portok, minden más Fa0/1-24 port: VLAN 99 + shutdown
-# kind: host (port-security max 2) | ap (port-security max 10) | server (csak portfast+bpduguard)
+# kind: host (port-security max 2) | ap (port-security max 10) | server (portfast+bpduguard) | link (csak portfast, switch/ASA felé)
 # ----------------------------------------------------------------------------
 switches:
   - hostname: SW-A1
@@ -234,9 +234,9 @@ switches:
     stp: pvst
     plain: true          # egyszerű 254-es VLAN-os aggregáló az ASA és a core-ok között
     ports:
-      - {port: FastEthernet0/1, vlan: 254, kind: server}
-      - {port: FastEthernet0/2, vlan: 254, kind: server}
-      - {port: FastEthernet0/3, vlan: 254, kind: server}
+      - {port: FastEthernet0/1, vlan: 254, kind: link}     # ASA / core felé: más switch (BPDU-t küldhet) → nincs bpduguard
+      - {port: FastEthernet0/2, vlan: 254, kind: link}
+      - {port: FastEthernet0/3, vlan: 254, kind: link}
   - hostname: SW-DEB
     site: deb
     stp: rapid-pvst

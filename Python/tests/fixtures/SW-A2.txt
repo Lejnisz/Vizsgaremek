@@ -1,0 +1,207 @@
+hostname SW-A2
+enable secret 5 $1$mERr$he2fdun4XsKPZCFWA6xW9/
+ip ssh version 2
+no ip domain-lookup
+ip domain-name uroborosz.local
+username admin secret 5 $1$mERr$kTyI5wGy8NHk8VB7p6x0q1
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+interface FastEthernet0/1
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+interface FastEthernet0/2
+ switchport access vlan 30
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+interface FastEthernet0/3
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/4
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/5
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/6
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/7
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/8
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/9
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/10
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/11
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/12
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/13
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/14
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/15
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/16
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/17
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/18
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/19
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/20
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/21
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/22
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/23
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/24
+ switchport access vlan 99
+ shutdown
+interface GigabitEthernet0/1
+ switchport trunk native vlan 99
+ switchport mode trunk
+interface GigabitEthernet0/2
+ switchport trunk native vlan 99
+ switchport mode trunk
+interface Vlan40
+ ip address 10.1.40.12 255.255.255.0
+ip default-gateway 10.1.40.1
+banner motd ^CUroborosz Biztonsag Kft. - csak jogosult hasznalat^C
+logging 10.1.30.20
+ip access-list standard MGMT-ACL
+ permit 10.1.40.0 0.0.0.255
+ permit 10.1.254.0 0.0.0.7
+ permit 172.16.0.0 0.0.255.255
+line con 0
+line vty 0 4
+ access-class MGMT-ACL in
+ login local
+ transport input ssh
+line vty 5 15
+ access-class MGMT-ACL in
+ login local
+ transport input ssh
+interface FastEthernet0/3
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/3
+ switchport mode access
+interface FastEthernet0/4
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/4
+ switchport mode access
+interface FastEthernet0/5
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/5
+ switchport mode access
+interface FastEthernet0/6
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/6
+ switchport mode access
+interface FastEthernet0/7
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/7
+ switchport mode access
+interface FastEthernet0/8
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/8
+ switchport mode access
+interface FastEthernet0/9
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/9
+ switchport mode access
+interface FastEthernet0/10
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/10
+ switchport mode access
+interface FastEthernet0/11
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/11
+ switchport mode access
+interface FastEthernet0/12
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/12
+ switchport mode access
+interface FastEthernet0/13
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/13
+ switchport mode access
+interface FastEthernet0/14
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/14
+ switchport mode access
+interface FastEthernet0/15
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/15
+ switchport mode access
+interface FastEthernet0/16
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/16
+ switchport mode access
+interface FastEthernet0/17
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/17
+ switchport mode access
+interface FastEthernet0/18
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/18
+ switchport mode access
+interface FastEthernet0/19
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/19
+ switchport mode access
+interface FastEthernet0/20
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/20
+ switchport mode access
+interface FastEthernet0/21
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/21
+ switchport mode access
+interface FastEthernet0/22
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/22
+ switchport mode access
+interface FastEthernet0/23
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/23
+ switchport mode access
+interface FastEthernet0/24
+ description PARKING (nem hasznalt port)
+interface FastEthernet0/24
+ switchport mode access
+interface GigabitEthernet0/1
+ description trunk
+interface GigabitEthernet0/2
+ description trunk
+end

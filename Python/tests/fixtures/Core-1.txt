@@ -1,0 +1,131 @@
+hostname Core-1
+login block-for 120 attempts 5 within 60
+enable secret 5 $1$mERr$he2fdun4XsKPZCFWA6xW9/
+ip routing
+ipv6 unicast-routing
+username admin privilege 15 secret 5 $1$mERr$kTyI5wGy8NHk8VB7p6x0q1
+ip ssh version 2
+no ip domain-lookup
+ip domain-name uroborosz.local
+spanning-tree mode rapid-pvst
+spanning-tree vlan 10,30,50,254 priority 24576
+spanning-tree vlan 20,40,60 priority 28672
+interface Port-channel1
+ switchport trunk native vlan 99
+ switchport mode trunk
+interface GigabitEthernet1/0/1
+ switchport trunk native vlan 99
+ switchport mode trunk
+interface GigabitEthernet1/0/2
+ switchport trunk native vlan 99
+ switchport mode trunk
+interface GigabitEthernet1/0/3
+ switchport access vlan 254
+ switchport mode access
+interface GigabitEthernet1/0/23
+ switchport trunk native vlan 99
+ switchport mode trunk
+ channel-group 1 mode active
+interface GigabitEthernet1/0/24
+ switchport trunk native vlan 99
+ switchport mode trunk
+ channel-group 1 mode active
+interface Vlan10
+ ip address 10.1.10.2 255.255.255.0
+ ip helper-address 10.1.30.10
+ ipv6 address 2001:DB8:1:10::2/64
+ standby version 2
+ standby 10 ip 10.1.10.1
+ standby 10 priority 110
+ standby 10 preempt
+interface Vlan20
+ ip address 10.1.20.2 255.255.255.0
+ ip helper-address 10.1.30.10
+ ipv6 address 2001:DB8:1:20::2/64
+ standby version 2
+ standby 20 ip 10.1.20.1
+ standby 20 preempt
+interface Vlan30
+ ip address 10.1.30.2 255.255.255.0
+ ipv6 address 2001:DB8:1:30::2/64
+ standby version 2
+ standby 30 ip 10.1.30.1
+ standby 30 priority 110
+ standby 30 preempt
+interface Vlan40
+ ip address 10.1.40.2 255.255.255.0
+ ip helper-address 10.1.30.10
+ ipv6 address 2001:DB8:1:40::2/64
+ standby version 2
+ standby 40 ip 10.1.40.1
+ standby 40 preempt
+interface Vlan50
+ ip address 10.1.50.2 255.255.255.0
+ ip helper-address 10.1.30.10
+ ipv6 address 2001:DB8:1:50::2/64
+ standby version 2
+ standby 50 ip 10.1.50.1
+ standby 50 priority 110
+ standby 50 preempt
+interface Vlan60
+ ip address 10.1.60.2 255.255.255.0
+ ip helper-address 10.1.30.10
+ ip access-group GUEST-IN in
+ ipv6 address 2001:DB8:1:60::2/64
+ standby version 2
+ standby 60 ip 10.1.60.1
+ standby 60 preempt
+interface Vlan254
+ ip address 10.1.254.2 255.255.255.248
+ ipv6 address 2001:DB8:1:254::2/64
+ standby version 2
+ standby 254 ip 10.1.254.1
+ standby 254 priority 110
+ standby 254 preempt
+ip route 0.0.0.0 0.0.0.0 10.1.254.4
+ipv6 route ::/0 2001:DB8:1:254::4
+ip access-list extended GUEST-IN
+ deny ip 10.1.60.0 0.0.0.255 10.0.0.0 0.255.255.255
+ permit ip any any
+ip access-list standard MGMT-ACL
+ permit 10.1.40.0 0.0.0.255
+ permit 10.1.254.0 0.0.0.7
+ permit 172.16.0.0 0.0.255.255
+banner motd ^CUroborosz Biztonsag Kft. - csak jogosult hasznalat^C
+logging 10.1.30.20
+line con 0
+line vty 0 4
+ access-class MGMT-ACL in
+ login local
+ transport input ssh
+line vty 5 15
+ access-class MGMT-ACL in
+ login local
+ transport input ssh
+interface Port-channel1
+ description Core-Core
+interface GigabitEthernet1/0/23
+ description Core-Core LACP
+interface GigabitEthernet1/0/24
+ description Core-Core LACP
+interface GigabitEthernet1/0/1
+ description SW-A1
+interface GigabitEthernet1/0/2
+ description SW-A2
+interface GigabitEthernet1/0/3
+ description SW-FW
+interface Vlan10
+ description SOC
+interface Vlan20
+ description DEV
+interface Vlan30
+ description SERVERS
+interface Vlan40
+ description MGMT
+interface Vlan50
+ description WIFI-STAFF
+interface Vlan60
+ description WIFI-GUEST
+interface Vlan254
+ description TRANSIT
+end

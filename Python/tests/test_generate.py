@@ -102,6 +102,8 @@ def test_no_overlapping_wan_subnets(model):
             assert not a.overlaps(b)
 
 
-def test_verify_matches_known_good_fixture():
+@pytest.mark.parametrize("dev", ["ISP", "R-BP", "R-DEB", "R-GYR", "R-UGY", "ASA-BP", "Core-1", "Core-2",
+                                 "SW-FW", "SW-A1", "SW-A2", "SW-DEB", "SW-GYR", "SW-UGY"])
+def test_verify_matches_live_fixture(dev):
     fx = ROOT / "tests" / "fixtures"
-    assert verify.main(["R-DEB", str(fx / "R-DEB.txt")]) in (0, 1)
+    assert verify.main([dev, str(fx / f"{dev}.txt"), "--strict"]) == 0

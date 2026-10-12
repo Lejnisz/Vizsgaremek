@@ -83,14 +83,14 @@ def _secret_key(line: str) -> str:
     return line
 
 
-def compare(generated: str, running: str) -> list[str]:
+def compare(generated: str, running: str, strict: bool = False) -> list[str]:
     gen = normalize(generated)
     run = normalize(running)
     run_set = set(run)
     run_secret = {(c, _secret_key(l)) for c, l in run if l.startswith(SECRET_PREFIXES)}
     missing = []
     for ctx, line in gen:
-        if any(re.search(p, line) for p in IGNORE) or line.startswith("description "):
+        if any(re.search(p, line) for p in IGNORE) or (line.startswith("description ") and not strict):
             continue                       # a leírások csak kozmetikai többletet adnak
         if line.startswith(SECRET_PREFIXES):
             if (ctx, _secret_key(line)) not in run_secret:
@@ -104,12 +104,34 @@ def compare(generated: str, running: str) -> list[str]:
     return missing
 
 
+def to_commands(missing: list[str]) -> list[str]:
+    """A compare() "[kontextus] parancs" sorait konfigurációs parancssorrá alakítja."""
+    cmds = ["configure terminal"]
+    cur = ""
+    for m in missing:
+        ctx, line = re.match(r"\[(.*?)\] (.*)", m).groups()
+        ctx = "" if ctx == "global" else ctx
+        if ctx != cur:
+            if cur:
+                cmds.append("exit")
+            if ctx:
+                cmds.append(ctx)
+            cur = ctx
+        cmds.append(line)
+    if cur:
+        cmds.append("exit")
+    cmds += ["end", "write memory"]
+    return [c for i, c in enumerate(cmds) if i == 0 or c != cmds[i - 1]]
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("device")
     ap.add_argument("running", help="a `show running-config` kimenet szövegfájlban")
     ap.add_argument("--inventory", default=str(generate.ROOT / "inventory" / "network.yml"))
     ap.add_argument("--secrets", default=str(generate.ROOT / "inventory" / "secrets.yml"))
+    ap.add_argument("--strict", action="store_true", help="a leírásokat (description) és a `logging buffered` sort is ellenőrzi")
+    ap.add_argument("--commands", action="store_true", help="JSON-ban kiírja a hiányzó sorok bevitelére szolgáló parancsokat")
     ap.add_argument("--show-extra", action="store_true", help="a futó konfig azon sorai is, amiket a generátor nem ír")
     args = ap.parse_args(argv)
 
@@ -121,7 +143,11 @@ def main(argv=None) -> int:
     gen_text = generate.render(generate.make_env(), devs[args.device])
     run_text = Path(args.running).read_text(encoding="utf-8")
 
-    missing = compare(gen_text, run_text)
+    missing = compare(gen_text, run_text, strict=args.strict)
+    if args.commands:
+        import json
+        print(json.dumps(to_commands(missing), ensure_ascii=False))
+        return 1 if missing else 0
     if missing:
         print(f"{args.device}: {len(missing)} generált sor hiányzik a futó konfigból:")
         for m in missing:

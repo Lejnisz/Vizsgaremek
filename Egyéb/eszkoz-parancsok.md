@@ -17,6 +17,8 @@ Eszközönként a teljes, bemásolható parancssor a konfig-generátor kimeneté
 - `aaa new-model` után a konzol bejelentkezést kér: `aaa authentication login CONSOLE none` + `line con 0` / `login authentication CONSOLE`.
 - Modul behelyezés (HWIC-2T) újraindítja az eszközt; soros kábelnél a topológia-eszköznek `cable: serial` kell.
 - A `show running-config | include` csak enable módban működik.
+- Tunnel interfészre a `description` nem támogatott; a `logging buffered` elfogadott, de nem jelenik meg a running-configban.
+
 
 ---
 
@@ -169,19 +171,16 @@ crypto map CM 100 ipsec-isakmp dynamic DYN
 ip local pool VPN-POOL 10.9.0.10 10.9.0.50
 !
 interface Tunnel0
- description GRE/IPsec Debrecen
  ip address 172.16.0.1 255.255.255.252
  mtu 1476
  tunnel source FastEthernet0/0
  tunnel destination 203.0.113.6
 interface Tunnel1
- description GRE/IPsec Győr
  ip address 172.16.0.5 255.255.255.252
  mtu 1476
  tunnel source FastEthernet0/0
  tunnel destination 203.0.113.10
 interface Tunnel2
- description GRE/IPsec Ügyfél (mintaügyfél)
  ip address 172.16.0.9 255.255.255.252
  mtu 1476
  tunnel source FastEthernet0/0
@@ -699,17 +698,14 @@ interface FastEthernet0/1
  switchport access vlan 254
  switchport mode access
  spanning-tree portfast
- spanning-tree bpduguard enable
 interface FastEthernet0/2
  switchport access vlan 254
  switchport mode access
  spanning-tree portfast
- spanning-tree bpduguard enable
 interface FastEthernet0/3
  switchport access vlan 254
  switchport mode access
  spanning-tree portfast
- spanning-tree bpduguard enable
 interface FastEthernet0/4
  description PARKING (nem hasznalt port)
  switchport access vlan 99

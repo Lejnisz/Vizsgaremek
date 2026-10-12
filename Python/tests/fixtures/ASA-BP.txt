@@ -1,0 +1,83 @@
+ASA Version 9.6(1)
+hostname ASA-BP
+domain-name uroborosz.local
+enable password Z8B1XgYGHoeD9aeP encrypted
+interface GigabitEthernet1/1
+ nameif outside
+ security-level 0
+ ip address 10.1.255.2 255.255.255.252
+ ipv6 address 2001:DB8:1:FF::2/64
+interface GigabitEthernet1/2
+ nameif inside
+ security-level 100
+ ip address 10.1.254.4 255.255.255.248
+ ipv6 address 2001:DB8:1:254::4/64
+interface GigabitEthernet1/3
+ nameif dmz
+ security-level 50
+ ip address 10.1.100.1 255.255.255.0
+ ipv6 address 2001:DB8:1:100::1/64
+interface GigabitEthernet1/4
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+interface GigabitEthernet1/5
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+interface GigabitEthernet1/6
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+interface GigabitEthernet1/7
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+interface GigabitEthernet1/8
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+interface Management1/1
+ management-only
+ no nameif
+ no security-level
+ no ip address
+ shutdown
+ipv6 route outside ::/0 2001:DB8:1:FF::1
+ipv6 route inside 2001:DB8:1::/48 2001:DB8:1:254::2
+route outside 0.0.0.0 0.0.0.0 10.1.255.1 1
+route inside 10.1.0.0 255.255.0.0 10.1.254.1 1
+route outside 10.2.0.0 255.254.0.0 10.1.255.1 1
+route outside 10.4.0.0 255.255.0.0 10.1.255.1 1
+access-list OUTSIDE-IN extended permit tcp any host 10.1.100.10 eq 443
+access-list OUTSIDE-IN extended permit tcp any host 10.1.100.10 eq www
+access-list OUTSIDE-IN extended permit ip 10.2.0.0 255.254.0.0 10.1.0.0 255.255.0.0
+access-list OUTSIDE-IN extended permit ip 10.4.0.0 255.255.0.0 10.1.0.0 255.255.0.0
+access-list OUTSIDE-IN extended permit icmp any host 10.1.100.10 echo
+access-list OUTSIDE-IN extended permit ip 10.9.0.0 255.255.255.0 10.1.30.0 255.255.255.0
+access-list DMZ-IN extended permit icmp host 10.1.100.10 10.1.0.0 255.255.0.0 echo-reply
+access-list DMZ-IN extended permit tcp host 10.1.100.10 eq www 10.1.0.0 255.255.0.0
+access-list DMZ-IN extended permit tcp host 10.1.100.10 eq 443 10.1.0.0 255.255.0.0
+access-list DMZ-IN extended deny ip 10.1.100.0 255.255.255.0 10.1.0.0 255.255.0.0
+access-list DMZ-IN extended permit ip any any
+access-group OUTSIDE-IN in interface outside
+access-group DMZ-IN in interface dmz
+aaa authentication ssh console LOCAL
+username admin password 87RB8NztM1z99QUB encrypted
+class-map inspection_default
+ match default-inspection-traffic
+policy-map global_policy
+ class inspection_default
+  inspect dns preset_dns_map
+  inspect ftp
+  inspect icmp
+  inspect tftp
+service-policy global_policy global
+telnet timeout 5
+ssh 10.1.40.0 255.255.255.0 inside
+ssh timeout 5
