@@ -1,0 +1,40 @@
+00:00:00.090100 VirtualBox GUI (separate) 7.2.16 r174877 win.amd64 (Aug 13 2026 19:50:41) release log
+00:00:00.090101 Log opened 2026-10-14T06:32:17.071672700Z
+00:00:00.090102 Build Type: release
+00:00:00.090103 OS Product: Windows 10
+00:00:00.090151 OS Release: 10.0.19045.6456
+00:00:00.090153 OS Service Pack: 
+00:00:00.106436 DMI Product Name: HP Elite SFF 800 G9 Desktop PC
+00:00:00.111951 DMI Product Version: SBKPFV3
+00:00:00.111960 Firmware type: UEFI
+00:00:00.112208 Secure Boot: Disabled
+00:00:00.112213 Host RAM: 16053MB (15.6GB) total, 6404MB (6.2GB) available
+00:00:00.112216 Executable: C:\Program Files\Oracle\VirtualBox\VirtualBoxVM.exe
+00:00:00.112217 Process ID: 8884
+00:00:00.112217 Package type: WINDOWS_64BITS_GENERIC
+00:00:00.112217 Windows Features:
+00:00:00.112217   Core Isolation (Memory Integrity): Not supported
+00:00:00.112789 GUI: UIMediumEnumerator: Initial medium-enumeration finished!
+00:00:00.123740 GUI: UIMediumEnumerator: Medium-enumeration started...
+00:00:00.605160 GUI: UIFrameBufferPrivate::performResize: Size=640x480, Using fallback buffer since no source bitmap is provided
+00:00:00.608474 DnD: User Interface Privilege Isolation (UIPI) is running with SECURITY_MANDATORY_MEDIUM_RID
+00:00:00.701480 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:00.701501 GUI: UIFrameBufferPrivate::performResize: Size=720x400, Using fallback buffer since no source bitmap is provided
+00:00:00.714583 GUI: UISession::sltAdditionsChange: GA state doesn't really changed, still notifying listeners.
+00:00:00.714604 GUI: UIMachineLogicNormal::sltCheckForRequestedVisualStateType: Requested-state=1, Machine-state=6
+00:00:00.717722 GUI: UIMachineLogicNormal::sltCheckForRequestedVisualStateType: Requested-state=1, Machine-state=6
+00:00:01.022600 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:06.242044 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:19.680153 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:24.756221 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:25.943644 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:29.753901 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:32.096066 GUI: Request for close-action to power VM off.
+00:00:32.096191 GUI: Powering VM off..
+00:00:32.118972 GUI: UIMediumEnumerator: Medium-enumeration finished!
+00:00:32.192206 GUI: Request for async QApp quit.
+00:00:32.193574 GUI: Cannot notify guest about VM window out-of-focus event
+00:00:32.208611 GUI: UICommon: Handling aboutToQuit request..
+00:00:33.602860 ERROR [COM]: aRC=E_UNEXPECTED (0x8000ffff) aIID={c0447716-ff5a-4795-b57a-ecd5fffa18a4} aComponent={SessionWrap} aText={The session is not locked (session state: Unlocked)}, preserve=false aResultDetail=0
+00:00:33.603387 ERROR [COM]: aRC=E_UNEXPECTED (0x8000ffff) aIID={c0447716-ff5a-4795-b57a-ecd5fffa18a4} aComponent={SessionWrap} aText={The session is not locked (session state: Unlocked)}, preserve=false aResultDetail=0
+00:00:33.612350 GUI: UICommon: aboutToQuit request handled!
